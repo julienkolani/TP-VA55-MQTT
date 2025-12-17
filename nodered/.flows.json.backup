@@ -1,0 +1,268 @@
+[
+    {
+        "id": "flow_main",
+        "type": "tab",
+        "label": "Controleur Intersection VA55",
+        "disabled": false,
+        "info": "Controleur Intersection - Modes FIFO et FEU"
+    },
+    {
+        "id": "mqtt_broker",
+        "type": "mqtt-broker",
+        "name": "Mosquitto Docker",
+        "broker": "mosquitto",
+        "port": "1883",
+        "clientid": "nodered_controller",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true
+    },
+    {
+        "id": "tab_main",
+        "type": "ui_tab",
+        "name": "🚗 Intersection VA55",
+        "icon": "fa-road",
+        "order": 1
+    },
+    {
+        "id": "group_header",
+        "type": "ui_group",
+        "name": "",
+        "tab": "tab_main",
+        "order": 1,
+        "disp": false,
+        "width": 12
+    },
+    {
+        "id": "group_main",
+        "type": "ui_group",
+        "name": "",
+        "tab": "tab_main",
+        "order": 2,
+        "disp": false,
+        "width": 12
+    },
+    {
+        "id": "group_logs",
+        "type": "ui_group",
+        "name": "",
+        "tab": "tab_main",
+        "order": 3,
+        "disp": false,
+        "width": 12
+    },
+    {
+        "id": "mqtt_in",
+        "type": "mqtt in",
+        "z": "flow_main",
+        "name": "Status Robots",
+        "topic": "intersection/status",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "mqtt_broker",
+        "x": 130,
+        "y": 140,
+        "wires": [
+            [
+                "controller"
+            ]
+        ]
+    },
+    {
+        "id": "controller",
+        "type": "function",
+        "z": "flow_main",
+        "name": "Controleur",
+        "func": "let mode = global.get(\"mode\") || \"FIFO\";\nlet state = flow.get(\"state\") || {\n    intersection: \"LIBRE\",\n    queue: [],\n    robots: {},\n    feu: { A: \"VERT\", B: \"ROUGE\" },\n    logs: [],\n    eventCount: 0,\n    stats: { total: 0, passed: 0 }\n};\n\nlet data = msg.payload;\nlet robot_id = data.id;\nlet voie = data.voie;\nlet etape = data.etape;\nlet action = data.action;\n\nstate.eventCount++;\nstate.robots[robot_id] = { voie, etape, action, time: Date.now() };\n\nlet commands = [];\nlet eventType = \"\";\n\nif (mode === \"FEU\") {\n    if (etape === 2 && action === \"stop\") {\n        if (state.feu[voie] === \"VERT\") {\n            commands.push({ target_id: robot_id, action: \"GO\" });\n            state.intersection = \"OCCUPE\";\n            eventType = \"✅ GO\";\n        } else {\n            if (!state.queue.includes(robot_id)) state.queue.push(robot_id);\n            commands.push({ target_id: robot_id, action: \"STOP\" });\n            eventType = \"🛑 STOP\";\n        }\n    } else if (etape === 3) {\n        state.intersection = \"LIBRE\";\n        delete state.robots[robot_id];\n        state.stats.passed++;\n        eventType = \"🏁 SORTIE\";\n        \n        let autre = (voie === \"A\") ? \"B\" : \"A\";\n        let waitAutre = state.queue.filter(id => state.robots[id] && state.robots[id].voie === autre);\n        let waitMeme = state.queue.filter(id => state.robots[id] && state.robots[id].voie === voie);\n        \n        if (waitAutre.length > 0 && waitMeme.length === 0) {\n            state.feu.A = (state.feu.A === \"VERT\") ? \"ROUGE\" : \"VERT\";\n            state.feu.B = (state.feu.B === \"VERT\") ? \"ROUGE\" : \"VERT\";\n            let next = waitAutre[0];\n            state.queue = state.queue.filter(id => id !== next);\n            commands.push({ target_id: next, action: \"GO\" });\n            state.intersection = \"OCCUPE\";\n        } else if (waitMeme.length > 0) {\n            let next = waitMeme[0];\n            state.queue = state.queue.filter(id => id !== next);\n            commands.push({ target_id: next, action: \"GO\" });\n            state.intersection = \"OCCUPE\";\n        }\n    } else if (etape === 1) {\n        state.stats.total++;\n        eventType = \"📍 ENTREE\";\n    }\n} else if (mode === \"FIFO\") {\n    if (etape === 2 && action === \"stop\") {\n        if (state.intersection === \"LIBRE\") {\n            state.intersection = \"OCCUPE\";\n            commands.push({ target_id: robot_id, action: \"GO\" });\n            eventType = \"✅ GO\";\n        } else {\n            if (!state.queue.includes(robot_id)) state.queue.push(robot_id);\n            commands.push({ target_id: robot_id, action: \"STOP\" });\n            eventType = \"🛑 STOP (#\" + state.queue.length + \")\";\n        }\n    } else if (etape === 3) {\n        delete state.robots[robot_id];\n        state.stats.passed++;\n        eventType = \"🏁 SORTIE\";\n        \n        if (state.queue.length > 0) {\n            let next = state.queue.shift();\n            commands.push({ target_id: next, action: \"GO\" });\n        } else {\n            state.intersection = \"LIBRE\";\n        }\n    } else if (etape === 1) {\n        state.stats.total++;\n        eventType = \"📍 ENTREE\";\n    }\n}\n\nstate.logs.unshift({\n    num: state.eventCount,\n    time: new Date().toLocaleTimeString(),\n    robot: robot_id,\n    voie: voie,\n    etape: etape,\n    event: eventType || action\n});\nif (state.logs.length > 50) state.logs.pop();\n\nflow.set(\"state\", state);\n\nlet msgs_out = commands.map(cmd => ({ payload: cmd }));\nmsg.dashboard = {\n    mode: mode,\n    intersection: state.intersection,\n    queue: state.queue,\n    feu: state.feu,\n    robots: Object.entries(state.robots).map(([id, r]) => ({ id, ...r })),\n    logs: state.logs,\n    stats: state.stats\n};\n\nif (commands.length > 0) return [msgs_out, msg];\nreturn [null, msg];",
+        "outputs": 2,
+        "initialize": "flow.set(\"state\", {\n    intersection: \"LIBRE\",\n    queue: [],\n    robots: {},\n    feu: { A: \"VERT\", B: \"ROUGE\" },\n    logs: [],\n    eventCount: 0,\n    stats: { total: 0, passed: 0 }\n});\nglobal.set(\"mode\", \"FIFO\");",
+        "x": 330,
+        "y": 140,
+        "wires": [
+            [
+                "mqtt_out"
+            ],
+            [
+                "dashboard_format"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_out",
+        "type": "mqtt out",
+        "z": "flow_main",
+        "name": "Commandes",
+        "topic": "intersection/command",
+        "qos": "1",
+        "broker": "mqtt_broker",
+        "x": 530,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "dashboard_format",
+        "type": "function",
+        "z": "flow_main",
+        "name": "Format UI",
+        "func": "let d = msg.dashboard;\n\n// Header avec stats\nmsg.header = `\n<div style=\"\n    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);\n    padding: 25px;\n    border-radius: 16px;\n    margin: -16px -16px 20px -16px;\n    box-shadow: 0 10px 40px rgba(0,0,0,0.3);\n\">\n    <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n        <div>\n            <h1 style=\"margin: 0; font-size: 28px; color: #fff; font-weight: 300;\">\n                🚦 Intersection <span style=\"font-weight: 600;\">VA55</span>\n            </h1>\n            <p style=\"margin: 8px 0 0 0; color: #888; font-size: 14px;\">Contrôleur coopératif MQTT</p>\n        </div>\n        <div style=\"\n            background: ${d.mode === 'FIFO' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'linear-gradient(135deg, #f093fb, #f5576c)'};\n            padding: 12px 24px;\n            border-radius: 30px;\n            color: white;\n            font-weight: 600;\n            font-size: 16px;\n            box-shadow: 0 4px 15px rgba(0,0,0,0.3);\n        \">\n            ${d.mode === 'FIFO' ? '🔢 FIFO' : '🚦 FEU'}\n        </div>\n    </div>\n    <div style=\"display: flex; gap: 20px; margin-top: 20px;\">\n        <div style=\"flex: 1; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;\">\n            <div style=\"font-size: 32px; font-weight: 700; color: #4FC3F7;\">${d.stats.total}</div>\n            <div style=\"font-size: 12px; color: #888; margin-top: 4px;\">Entrées</div>\n        </div>\n        <div style=\"flex: 1; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;\">\n            <div style=\"font-size: 32px; font-weight: 700; color: #81C784;\">${d.stats.passed}</div>\n            <div style=\"font-size: 12px; color: #888; margin-top: 4px;\">Passages</div>\n        </div>\n        <div style=\"flex: 1; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;\">\n            <div style=\"font-size: 32px; font-weight: 700; color: #FFB74D;\">${d.queue.length}</div>\n            <div style=\"font-size: 12px; color: #888; margin-top: 4px;\">En attente</div>\n        </div>\n        <div style=\"flex: 1; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;\">\n            <div style=\"font-size: 32px; font-weight: 700; color: ${d.intersection === 'LIBRE' ? '#81C784' : '#ef5350'};\">\n                ${d.intersection === 'LIBRE' ? '✓' : '✕'}\n            </div>\n            <div style=\"font-size: 12px; color: #888; margin-top: 4px;\">${d.intersection}</div>\n        </div>\n    </div>\n</div>\n`;\n\n// Main panel\nlet robotsHtml = '';\nif (d.robots.length === 0) {\n    robotsHtml = '<div style=\"color: #666; font-style: italic; padding: 20px; text-align: center;\">Aucun robot actif</div>';\n} else {\n    robotsHtml = '<div style=\"display: flex; flex-wrap: wrap; gap: 12px; padding: 15px;\">';\n    for (let r of d.robots) {\n        let gradient = r.voie === 'A' \n            ? 'linear-gradient(135deg, #4FC3F7, #29B6F6)' \n            : 'linear-gradient(135deg, #FFD54F, #FFC107)';\n        let icon = r.etape === 2 && r.action === 'stop' ? '⏳' : r.etape === 2 ? '🚗' : r.etape === 3 ? '🏁' : '📍';\n        robotsHtml += `\n        <div style=\"\n            background: linear-gradient(135deg, #2a2a3e, #1a1a2e);\n            border-left: 4px solid ${r.voie === 'A' ? '#4FC3F7' : '#FFD54F'};\n            padding: 12px 16px;\n            border-radius: 8px;\n            min-width: 120px;\n            box-shadow: 0 4px 12px rgba(0,0,0,0.2);\n        \">\n            <div style=\"font-size: 20px; margin-bottom: 4px;\">${icon}</div>\n            <div style=\"font-weight: 600; color: #fff;\">${r.id}</div>\n            <div style=\"font-size: 11px; color: #888;\">Voie ${r.voie} • Étape ${r.etape}</div>\n        </div>`;\n    }\n    robotsHtml += '</div>';\n}\n\nlet queueHtml = '';\nif (d.queue.length === 0) {\n    queueHtml = '<div style=\"color: #666; font-style: italic; padding: 20px; text-align: center;\">File vide</div>';\n} else {\n    queueHtml = '<div style=\"padding: 15px;\">';\n    for (let i = 0; i < d.queue.length; i++) {\n        let r = d.robots.find(x => x.id === d.queue[i]) || { voie: '?' };\n        queueHtml += `\n        <div style=\"\n            display: flex;\n            align-items: center;\n            background: linear-gradient(135deg, #2a2a3e, #1a1a2e);\n            padding: 10px 15px;\n            border-radius: 8px;\n            margin-bottom: 8px;\n        \">\n            <div style=\"\n                width: 28px; height: 28px;\n                background: linear-gradient(135deg, #667eea, #764ba2);\n                border-radius: 50%;\n                display: flex;\n                align-items: center;\n                justify-content: center;\n                font-weight: 600;\n                font-size: 14px;\n                margin-right: 12px;\n            \">${i + 1}</div>\n            <div style=\"font-weight: 500;\">${d.queue[i]}</div>\n            <div style=\"\n                margin-left: auto;\n                background: ${r.voie === 'A' ? '#4FC3F7' : '#FFD54F'};\n                color: #000;\n                padding: 2px 8px;\n                border-radius: 4px;\n                font-size: 11px;\n                font-weight: 600;\n            \">Voie ${r.voie}</div>\n        </div>`;\n    }\n    queueHtml += '</div>';\n}\n\n// Feux\nlet feuxHtml = `\n<div style=\"display: flex; justify-content: center; gap: 40px; padding: 20px;\">\n    <div style=\"text-align: center;\">\n        <div style=\"\n            width: 80px; height: 80px;\n            border-radius: 50%;\n            background: ${d.feu.A === 'VERT' ? 'radial-gradient(circle, #81C784, #4CAF50)' : 'radial-gradient(circle, #ef5350, #c62828)'};\n            box-shadow: 0 0 ${d.feu.A === 'VERT' ? '30px #4CAF50' : '30px #c62828'};\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            font-size: 36px;\n            margin: 0 auto 10px;\n        \">${d.feu.A === 'VERT' ? '✓' : '✕'}</div>\n        <div style=\"font-size: 14px; color: #4FC3F7; font-weight: 600;\">VOIE A</div>\n        <div style=\"font-size: 12px; color: #888;\">${d.feu.A}</div>\n    </div>\n    <div style=\"text-align: center;\">\n        <div style=\"\n            width: 80px; height: 80px;\n            border-radius: 50%;\n            background: ${d.feu.B === 'VERT' ? 'radial-gradient(circle, #81C784, #4CAF50)' : 'radial-gradient(circle, #ef5350, #c62828)'};\n            box-shadow: 0 0 ${d.feu.B === 'VERT' ? '30px #4CAF50' : '30px #c62828'};\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            font-size: 36px;\n            margin: 0 auto 10px;\n        \">${d.feu.B === 'VERT' ? '✓' : '✕'}</div>\n        <div style=\"font-size: 14px; color: #FFD54F; font-weight: 600;\">VOIE B</div>\n        <div style=\"font-size: 12px; color: #888;\">${d.feu.B}</div>\n    </div>\n</div>\n`;\n\nmsg.main = `\n<div style=\"display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px;\">\n    <div style=\"background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 12px; overflow: hidden;\">\n        <div style=\"background: rgba(255,255,255,0.05); padding: 12px 16px; font-weight: 600; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n            🤖 Robots Actifs\n        </div>\n        ${robotsHtml}\n    </div>\n    <div style=\"background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 12px; overflow: hidden;\">\n        <div style=\"background: rgba(255,255,255,0.05); padding: 12px 16px; font-weight: 600; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n            📋 File d'Attente\n        </div>\n        ${queueHtml}\n    </div>\n    <div style=\"background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 12px; overflow: hidden;\">\n        <div style=\"background: rgba(255,255,255,0.05); padding: 12px 16px; font-weight: 600; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);\">\n            🚦 Feux\n        </div>\n        ${feuxHtml}\n    </div>\n</div>\n`;\n\n// Logs\nlet logsHtml = '<div style=\"max-height: 300px; overflow-y: auto;\">';\nfor (let i = 0; i < Math.min(d.logs.length, 20); i++) {\n    let l = d.logs[i];\n    let bg = i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';\n    let voieColor = l.voie === 'A' ? '#4FC3F7' : '#FFD54F';\n    logsHtml += `\n    <div style=\"display: flex; align-items: center; padding: 10px 16px; background: ${bg}; border-bottom: 1px solid rgba(255,255,255,0.05);\">\n        <span style=\"color: #555; width: 30px; font-size: 11px;\">#${l.num}</span>\n        <span style=\"color: #888; width: 80px; font-size: 12px;\">${l.time}</span>\n        <span style=\"\n            background: ${voieColor}20;\n            color: ${voieColor};\n            padding: 3px 10px;\n            border-radius: 4px;\n            font-weight: 600;\n            font-size: 12px;\n            margin-right: 12px;\n        \">${l.robot}</span>\n        <span style=\"\n            background: rgba(255,255,255,0.1);\n            padding: 3px 8px;\n            border-radius: 4px;\n            font-size: 11px;\n            margin-right: 12px;\n        \">E${l.etape}</span>\n        <span style=\"color: #aaa;\">${l.event}</span>\n    </div>`;\n}\nlogsHtml += '</div>';\n\nmsg.logs = `\n<div style=\"background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 12px; overflow: hidden;\">\n    <div style=\"background: rgba(255,255,255,0.05); padding: 12px 16px; font-weight: 600; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;\">\n        <span>📜 Historique</span>\n        <span style=\"color: #888; font-weight: 400; font-size: 12px;\">${d.logs.length} événements</span>\n    </div>\n    ${logsHtml}\n</div>\n`;\n\nreturn msg;",
+        "outputs": 1,
+        "x": 530,
+        "y": 180,
+        "wires": [
+            [
+                "ui_header",
+                "ui_main",
+                "ui_logs"
+            ]
+        ]
+    },
+    {
+        "id": "ui_header",
+        "type": "ui_template",
+        "z": "flow_main",
+        "group": "group_header",
+        "name": "Header",
+        "order": 1,
+        "width": 12,
+        "height": 4,
+        "format": "<div ng-bind-html=\"msg.header\"></div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 720,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ui_main",
+        "type": "ui_template",
+        "z": "flow_main",
+        "group": "group_main",
+        "name": "Main",
+        "order": 1,
+        "width": 12,
+        "height": 7,
+        "format": "<div ng-bind-html=\"msg.main\"></div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 720,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ui_logs",
+        "type": "ui_template",
+        "z": "flow_main",
+        "group": "group_logs",
+        "name": "Logs",
+        "order": 1,
+        "width": 12,
+        "height": 8,
+        "format": "<div ng-bind-html=\"msg.logs\"></div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 720,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "mode_selector",
+        "type": "ui_dropdown",
+        "z": "flow_main",
+        "name": "Mode",
+        "label": "",
+        "tooltip": "",
+        "place": "",
+        "group": "group_header",
+        "order": 2,
+        "width": 3,
+        "height": 1,
+        "passthru": true,
+        "multiple": false,
+        "options": [
+            {
+                "label": "🔢 FIFO",
+                "value": "FIFO",
+                "type": "str"
+            },
+            {
+                "label": "🚦 FEU",
+                "value": "FEU",
+                "type": "str"
+            }
+        ],
+        "payload": "",
+        "topic": "mode",
+        "x": 130,
+        "y": 260,
+        "wires": [
+            [
+                "set_mode"
+            ]
+        ]
+    },
+    {
+        "id": "set_mode",
+        "type": "function",
+        "z": "flow_main",
+        "name": "Set Mode",
+        "func": "global.set(\"mode\", msg.payload);\nflow.set(\"state\", {\n    intersection: \"LIBRE\",\n    queue: [],\n    robots: {},\n    feu: { A: \"VERT\", B: \"ROUGE\" },\n    logs: [],\n    eventCount: 0,\n    stats: { total: 0, passed: 0 }\n});\nreturn msg;",
+        "outputs": 1,
+        "x": 300,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "reset_btn",
+        "type": "ui_button",
+        "z": "flow_main",
+        "name": "Reset",
+        "group": "group_header",
+        "order": 3,
+        "width": 2,
+        "height": 1,
+        "passthru": false,
+        "label": "🔄 Reset",
+        "tooltip": "",
+        "color": "#fff",
+        "bgcolor": "#667eea",
+        "payload": "",
+        "payloadType": "str",
+        "topic": "",
+        "x": 130,
+        "y": 320,
+        "wires": [
+            [
+                "reset_state"
+            ]
+        ]
+    },
+    {
+        "id": "reset_state",
+        "type": "function",
+        "z": "flow_main",
+        "name": "Reset",
+        "func": "flow.set(\"state\", {\n    intersection: \"LIBRE\",\n    queue: [],\n    robots: {},\n    feu: { A: \"VERT\", B: \"ROUGE\" },\n    logs: [],\n    eventCount: 0,\n    stats: { total: 0, passed: 0 }\n});\nreturn msg;",
+        "outputs": 1,
+        "x": 290,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    }
+]

@@ -1,0 +1,427 @@
+0 verbose cli /usr/local/bin/node /usr/local/bin/npm
+1 info using npm@10.8.2
+2 info using node@v20.19.6
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/usr/src/node-red/.npmrc
+5 silly config load:file:/usr/local/etc/npmrc
+6 verbose title npm install node-red-dashboard
+7 verbose argv "install" "node-red-dashboard"
+8 verbose logfile logs-max:10 dir:/data/.npm/_logs/2025-12-17T09_15_29_658Z-
+9 verbose logfile /data/.npm/_logs/2025-12-17T09_15_29_658Z-debug-0.log
+10 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+11 silly logfile done cleaning log files
+12 silly idealTree buildDeps
+13 silly fetch manifest node-red-dashboard@*
+14 silly packumentCache full:https://registry.npmjs.org/node-red-dashboard cache-miss
+15 http fetch GET 200 https://registry.npmjs.org/node-red-dashboard 981ms (cache revalidated)
+16 silly packumentCache full:https://registry.npmjs.org/node-red-dashboard set size:549868 disposed:false
+17 silly placeDep ROOT node-red-dashboard@3.6.6 OK for: node-red-docker@4.1.2 want: *
+18 silly fetch manifest gridstack@^0.6.4
+19 silly packumentCache full:https://registry.npmjs.org/gridstack cache-miss
+20 silly fetch manifest socket.io@^4.8.1
+21 silly packumentCache full:https://registry.npmjs.org/socket.io cache-miss
+22 silly fetch manifest compression@^1.8.1
+23 silly packumentCache full:https://registry.npmjs.org/compression cache-miss
+24 http fetch GET 200 https://registry.npmjs.org/socket.io 75ms (cache revalidated)
+25 silly packumentCache full:https://registry.npmjs.org/socket.io set size:373575 disposed:false
+26 http fetch GET 200 https://registry.npmjs.org/gridstack 136ms (cache revalidated)
+27 silly packumentCache full:https://registry.npmjs.org/gridstack set size:531871 disposed:false
+28 http fetch GET 200 https://registry.npmjs.org/compression 148ms (cache revalidated)
+29 silly packumentCache full:https://registry.npmjs.org/compression set size:98467 disposed:false
+30 silly placeDep ROOT compression@1.8.1 OK for: node-red-dashboard@3.6.6 want: ^1.8.1
+31 silly placeDep ROOT gridstack@0.6.4 OK for: node-red-dashboard@3.6.6 want: ^0.6.4
+32 silly placeDep ROOT socket.io@4.8.1 OK for: node-red-dashboard@3.6.6 want: ^4.8.1
+33 silly fetch manifest compressible@~2.0.18
+34 silly packumentCache full:https://registry.npmjs.org/compressible cache-miss
+35 silly fetch manifest negotiator@~0.6.4
+36 silly packumentCache full:https://registry.npmjs.org/negotiator cache-miss
+37 silly fetch manifest safe-buffer@5.2.1
+38 silly packumentCache full:https://registry.npmjs.org/safe-buffer cache-miss
+39 silly fetch manifest jquery@^1.8 || 2 || 3
+40 silly packumentCache full:https://registry.npmjs.org/jquery cache-miss
+41 silly fetch manifest debug@~4.3.2
+42 silly packumentCache full:https://registry.npmjs.org/debug cache-miss
+43 silly fetch manifest base64id@~2.0.0
+44 silly packumentCache full:https://registry.npmjs.org/base64id cache-miss
+45 silly fetch manifest engine.io@~6.6.0
+46 silly packumentCache full:https://registry.npmjs.org/engine.io cache-miss
+47 silly fetch manifest socket.io-parser@~4.2.4
+48 silly packumentCache full:https://registry.npmjs.org/socket.io-parser cache-miss
+49 silly fetch manifest socket.io-adapter@~2.5.2
+50 silly packumentCache full:https://registry.npmjs.org/socket.io-adapter cache-miss
+51 http fetch GET 200 https://registry.npmjs.org/compressible 59ms (cache revalidated)
+52 silly packumentCache full:https://registry.npmjs.org/compressible set size:61733 disposed:false
+53 http fetch GET 200 https://registry.npmjs.org/safe-buffer 64ms (cache revalidated)
+54 silly packumentCache full:https://registry.npmjs.org/safe-buffer set size:41183 disposed:false
+55 http fetch GET 200 https://registry.npmjs.org/jquery 73ms (cache revalidated)
+56 silly packumentCache full:https://registry.npmjs.org/jquery set size:177082 disposed:false
+57 http fetch GET 200 https://registry.npmjs.org/debug 139ms (cache revalidated)
+58 silly packumentCache full:https://registry.npmjs.org/debug set size:195840 disposed:false
+59 http fetch GET 200 https://registry.npmjs.org/socket.io-parser 151ms (cache revalidated)
+60 silly packumentCache full:https://registry.npmjs.org/socket.io-parser set size:117471 disposed:false
+61 http fetch GET 200 https://registry.npmjs.org/negotiator 159ms (cache revalidated)
+62 silly packumentCache full:https://registry.npmjs.org/negotiator set size:48046 disposed:false
+63 http fetch GET 200 https://registry.npmjs.org/engine.io 160ms (cache revalidated)
+64 silly packumentCache full:https://registry.npmjs.org/engine.io set size:380957 disposed:false
+65 http fetch GET 200 https://registry.npmjs.org/base64id 173ms (cache revalidated)
+66 silly packumentCache full:https://registry.npmjs.org/base64id set size:6136 disposed:false
+67 http fetch GET 200 https://registry.npmjs.org/socket.io-adapter 173ms (cache revalidated)
+68 silly packumentCache full:https://registry.npmjs.org/socket.io-adapter set size:65427 disposed:false
+69 silly placeDep ROOT compressible@2.0.18 OK for: compression@1.8.1 want: ~2.0.18
+70 silly placeDep node_modules/compression negotiator@0.6.4 OK for: compression@1.8.1 want: ~0.6.4
+71 silly placeDep node_modules/compression safe-buffer@5.2.1 OK for: compression@1.8.1 want: 5.2.1
+72 silly placeDep ROOT jquery@3.7.1 OK for: gridstack@0.6.4 want: ^1.8 || 2 || 3
+73 silly placeDep ROOT base64id@2.0.0 OK for: socket.io@4.8.1 want: ~2.0.0
+74 silly placeDep node_modules/socket.io debug@4.3.7 OK for: socket.io@4.8.1 want: ~4.3.2
+75 silly placeDep ROOT engine.io@6.6.4 OK for: socket.io@4.8.1 want: ~6.6.0
+76 silly placeDep ROOT socket.io-adapter@2.5.5 OK for: socket.io@4.8.1 want: ~2.5.2
+77 silly placeDep ROOT socket.io-parser@4.2.4 OK for: socket.io@4.8.1 want: ~4.2.4
+78 silly fetch manifest ms@^2.1.3
+79 silly packumentCache full:https://registry.npmjs.org/ms cache-miss
+80 silly fetch manifest @types/cors@^2.8.12
+81 silly packumentCache full:https://registry.npmjs.org/@types%2fcors cache-miss
+82 silly fetch manifest debug@~4.3.1
+83 silly packumentCache full:https://registry.npmjs.org/debug cache-hit
+84 silly fetch manifest engine.io-parser@~5.2.1
+85 silly packumentCache full:https://registry.npmjs.org/engine.io-parser cache-miss
+86 silly fetch manifest ws@~8.17.1
+87 silly packumentCache full:https://registry.npmjs.org/ws cache-miss
+88 silly fetch manifest debug@~4.3.4
+89 silly packumentCache full:https://registry.npmjs.org/debug cache-hit
+90 silly fetch manifest ws@~8.17.1
+91 silly packumentCache full:https://registry.npmjs.org/ws cache-miss
+92 silly fetch manifest debug@~4.3.1
+93 silly packumentCache full:https://registry.npmjs.org/debug cache-hit
+94 silly fetch manifest @socket.io/component-emitter@~3.1.0
+95 silly packumentCache full:https://registry.npmjs.org/@socket.io%2fcomponent-emitter cache-miss
+96 http fetch GET 200 https://registry.npmjs.org/engine.io-parser 60ms (cache revalidated)
+97 silly packumentCache full:https://registry.npmjs.org/engine.io-parser set size:116455 disposed:false
+98 http fetch GET 200 https://registry.npmjs.org/ms 65ms (cache revalidated)
+99 silly packumentCache full:https://registry.npmjs.org/ms set size:92208 disposed:false
+100 http fetch GET 200 https://registry.npmjs.org/@types%2fcors 73ms (cache revalidated)
+101 silly packumentCache full:https://registry.npmjs.org/@types%2fcors set size:56991 disposed:false
+102 http fetch GET 200 https://registry.npmjs.org/ws 73ms (cache revalidated)
+103 silly packumentCache full:https://registry.npmjs.org/ws set size:410901 disposed:false
+104 http fetch GET 200 https://registry.npmjs.org/ws 83ms (cache revalidated)
+105 silly packumentCache full:https://registry.npmjs.org/ws set size:410901 disposed:false
+106 silly packumentCache full:https://registry.npmjs.org/ws dispose
+107 http fetch GET 200 https://registry.npmjs.org/@socket.io%2fcomponent-emitter 91ms (cache revalidated)
+108 silly packumentCache full:https://registry.npmjs.org/@socket.io%2fcomponent-emitter set size:14099 disposed:false
+109 silly fetch manifest bufferutil@^4.0.1
+110 silly packumentCache full:https://registry.npmjs.org/bufferutil cache-miss
+111 http fetch GET 200 https://registry.npmjs.org/bufferutil 40ms (cache revalidated)
+112 silly packumentCache full:https://registry.npmjs.org/bufferutil set size:51033 disposed:false
+113 silly fetch manifest utf-8-validate@>=5.0.2
+114 silly packumentCache full:https://registry.npmjs.org/utf-8-validate cache-miss
+115 http fetch GET 200 https://registry.npmjs.org/utf-8-validate 47ms (cache revalidated)
+116 silly packumentCache full:https://registry.npmjs.org/utf-8-validate set size:75205 disposed:false
+117 silly placeDep ROOT @types/cors@2.8.19 OK for: engine.io@6.6.4 want: ^2.8.12
+118 silly placeDep node_modules/engine.io debug@4.3.7 OK for: engine.io@6.6.4 want: ~4.3.1
+119 silly placeDep ROOT engine.io-parser@5.2.3 OK for: engine.io@6.6.4 want: ~5.2.1
+120 silly placeDep node_modules/engine.io ws@8.17.1 OK for: engine.io@6.6.4 want: ~8.17.1
+121 silly placeDep node_modules/socket.io-adapter debug@4.3.7 OK for: socket.io-adapter@2.5.5 want: ~4.3.4
+122 silly placeDep node_modules/socket.io-adapter ws@8.17.1 OK for: socket.io-adapter@2.5.5 want: ~8.17.1
+123 silly placeDep ROOT @socket.io/component-emitter@3.1.2 OK for: socket.io-parser@4.2.4 want: ~3.1.0
+124 silly placeDep node_modules/socket.io-parser debug@4.3.7 OK for: socket.io-parser@4.2.4 want: ~4.3.1
+125 silly placeDep node_modules/engine.io ms@2.1.3 OK for: debug@4.3.7 want: ^2.1.3
+126 silly placeDep node_modules/socket.io-adapter ms@2.1.3 OK for: debug@4.3.7 want: ^2.1.3
+127 silly placeDep node_modules/socket.io-parser ms@2.1.3 OK for: debug@4.3.7 want: ^2.1.3
+128 silly placeDep node_modules/socket.io ms@2.1.3 OK for: debug@4.3.7 want: ^2.1.3
+129 silly reify moves {}
+130 silly audit bulk request {
+130 silly audit   '@babel/runtime': [ '7.28.4' ],
+130 silly audit   '@isaacs/fs-minipass': [ '4.0.1' ],
+130 silly audit   '@node-red/editor-api': [ '4.1.2' ],
+130 silly audit   '@node-red/editor-client': [ '4.1.2' ],
+130 silly audit   '@node-red/nodes': [ '4.1.2' ],
+130 silly audit   '@node-red/registry': [ '4.1.2' ],
+130 silly audit   '@node-red/runtime': [ '4.1.2' ],
+130 silly audit   '@node-red/util': [ '4.1.2' ],
+130 silly audit   '@node-rs/bcrypt': [ '1.10.7' ],
+130 silly audit   '@node-rs/bcrypt-linux-x64-musl': [ '1.10.7' ],
+130 silly audit   '@sindresorhus/is': [ '5.6.0' ],
+130 silly audit   '@szmarczak/http-timer': [ '5.0.1' ],
+130 silly audit   '@types/http-cache-semantics': [ '4.0.4' ],
+130 silly audit   '@types/node': [ '24.10.1' ],
+130 silly audit   '@types/readable-stream': [ '4.0.22' ],
+130 silly audit   '@types/ws': [ '8.18.1' ],
+130 silly audit   abbrev: [ '1.1.1' ],
+130 silly audit   'abort-controller': [ '3.0.0' ],
+130 silly audit   accepts: [ '1.3.8' ],
+130 silly audit   acorn: [ '8.15.0' ],
+130 silly audit   'acorn-walk': [ '8.3.4' ],
+130 silly audit   'agent-base': [ '6.0.2' ],
+130 silly audit   debug: [ '4.4.3', '2.6.9', '4.3.7' ],
+130 silly audit   ms: [ '2.1.3', '2.0.0' ],
+130 silly audit   ajv: [ '8.17.1' ],
+130 silly audit   'ansi-colors': [ '4.1.3' ],
+130 silly audit   'ansi-regex': [ '5.0.1' ],
+130 silly audit   'ansi-styles': [ '4.3.0' ],
+130 silly audit   'append-field': [ '1.0.0' ],
+130 silly audit   argparse: [ '2.0.1' ],
+130 silly audit   'array-flatten': [ '1.1.1' ],
+130 silly audit   'async-mutex': [ '0.5.0' ],
+130 silly audit   asynckit: [ '0.4.0' ],
+130 silly audit   axios: [ '1.12.2' ],
+130 silly audit   'base64-js': [ '1.5.1' ],
+130 silly audit   'basic-auth': [ '2.0.1' ],
+130 silly audit   bcryptjs: [ '3.0.2' ],
+130 silly audit   bl: [ '6.1.5' ],
+130 silly audit   'body-parser': [ '1.20.3' ],
+130 silly audit   'iconv-lite': [ '0.4.24', '0.6.3' ],
+130 silly audit   'raw-body': [ '2.5.2', '3.0.0' ],
+130 silly audit   boolbase: [ '1.0.0' ],
+130 silly audit   buffer: [ '6.0.3' ],
+130 silly audit   'buffer-from': [ '1.1.2' ],
+130 silly audit   busboy: [ '1.6.0' ],
+130 silly audit   bytes: [ '3.1.2' ],
+130 silly audit   'cacheable-lookup': [ '7.0.0' ],
+130 silly audit   'cacheable-request': [ '10.2.14' ],
+130 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+130 silly audit   'call-bound': [ '1.0.4' ],
+130 silly audit   chalk: [ '4.1.2' ],
+130 silly audit   cheerio: [ '1.0.0-rc.10' ],
+130 silly audit   'cheerio-select': [ '1.6.0' ],
+130 silly audit   chownr: [ '3.0.0' ],
+130 silly audit   'cli-table': [ '0.3.11' ],
+130 silly audit   clone: [ '2.1.2' ],
+130 silly audit   'color-convert': [ '2.0.1' ],
+130 silly audit   'color-name': [ '1.1.4' ],
+130 silly audit   colors: [ '1.0.3' ],
+130 silly audit   'combined-stream': [ '1.0.8' ],
+130 silly audit   commist: [ '3.2.0' ],
+130 silly audit   'concat-stream': [ '2.0.0' ],
+130 silly audit   'readable-stream': [ '3.6.2', '4.7.0' ],
+130 silly audit   'content-disposition': [ '0.5.4' ],
+130 silly audit   'safe-buffer': [ '5.2.1', '5.1.2' ],
+130 silly audit   'content-type': [ '1.0.5' ],
+130 silly audit   cookie: [ '0.7.2' ],
+130 silly audit   'cookie-parser': [ '1.4.7' ],
+130 silly audit   'cookie-signature': [ '1.0.6', '1.0.7' ],
+130 silly audit   cors: [ '2.8.5' ],
+130 silly audit   cronosjs: [ '1.7.1' ],
+130 silly audit   'css-select': [ '4.3.0' ],
+130 silly audit   'css-what': [ '6.2.2' ],
+130 silly audit   'decompress-response': [ '6.0.0' ],
+130 silly audit   'mimic-response': [ '3.1.0', '4.0.0' ],
+130 silly audit   'defer-to-connect': [ '2.0.1' ],
+130 silly audit   'delayed-stream': [ '1.0.0' ],
+130 silly audit   denque: [ '2.1.0' ],
+130 silly audit   depd: [ '2.0.0' ],
+130 silly audit   destroy: [ '1.2.0' ],
+130 silly audit   'dom-serializer': [ '1.4.1' ],
+130 silly audit   domelementtype: [ '2.3.0' ],
+130 silly audit   domhandler: [ '4.3.1' ],
+130 silly audit   domutils: [ '2.8.0' ],
+130 silly audit   'dunder-proto': [ '1.0.1' ],
+130 silly audit   'ee-first': [ '1.1.1' ],
+130 silly audit   encodeurl: [ '2.0.0', '1.0.2' ],
+130 silly audit   enquirer: [ '2.4.1' ],
+130 silly audit   entities: [ '2.2.0' ],
+130 silly audit   'es-define-property': [ '1.0.1' ],
+130 silly audit   'es-errors': [ '1.3.0' ],
+130 silly audit   'es-object-atoms': [ '1.1.1' ],
+130 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+130 silly audit   'escape-html': [ '1.0.3' ],
+130 silly audit   etag: [ '1.8.1' ],
+130 silly audit   'event-target-shim': [ '5.0.1' ],
+130 silly audit   events: [ '3.3.0' ],
+130 silly audit   express: [ '4.22.1' ],
+130 silly audit   qs: [ '6.14.0', '6.13.0' ],
+130 silly audit   'express-session': [ '1.18.2' ],
+130 silly audit   'fast-deep-equal': [ '3.1.3' ],
+130 silly audit   'fast-unique-numbers': [ '8.0.13' ],
+130 silly audit   'fast-uri': [ '3.1.0' ],
+130 silly audit   finalhandler: [ '1.3.2' ],
+130 silly audit   'follow-redirects': [ '1.15.11' ],
+130 silly audit   'form-data': [ '4.0.4' ],
+130 silly audit   'form-data-encoder': [ '2.1.4' ],
+130 silly audit   forwarded: [ '0.2.0' ],
+130 silly audit   fresh: [ '0.5.2' ],
+130 silly audit   'fs-extra': [ '11.3.0' ],
+130 silly audit   'function-bind': [ '1.1.2' ],
+130 silly audit   'get-intrinsic': [ '1.3.0' ],
+130 silly audit   'get-proto': [ '1.0.1' ],
+130 silly audit   'get-stream': [ '6.0.1' ],
+130 silly audit   gopd: [ '1.2.0' ],
+130 silly audit   got: [ '12.6.1' ],
+130 silly audit   'graceful-fs': [ '4.2.11' ],
+130 silly audit   'has-flag': [ '4.0.0' ],
+130 silly audit   'has-symbols': [ '1.1.0' ],
+130 silly audit   'has-tostringtag': [ '1.0.2' ],
+130 silly audit   'hash-sum': [ '2.0.0' ],
+130 silly audit   hasown: [ '2.0.2' ],
+130 silly audit   'help-me': [ '5.0.0' ],
+130 silly audit   hpagent: [ '1.2.0' ],
+130 silly audit   htmlparser2: [ '6.1.0' ],
+130 silly audit   'http-cache-semantics': [ '4.2.0' ],
+130 silly audit   'http-errors': [ '2.0.0' ],
+130 silly audit   statuses: [ '2.0.1', '2.0.2' ],
+130 silly audit   'http2-wrapper': [ '2.2.1' ],
+130 silly audit   'https-proxy-agent': [ '5.0.1' ],
+130 silly audit   i18next: [ '24.2.3' ],
+130 silly audit   ieee754: [ '1.2.1' ],
+130 silly audit   inherits: [ '2.0.4' ],
+130 silly audit   'ip-address': [ '10.1.0' ],
+130 silly audit   'ipaddr.js': [ '1.9.1' ],
+130 silly audit   'is-utf8': [ '0.2.1' ],
+130 silly audit   'js-sdsl': [ '4.3.0' ],
+130 silly audit   'js-yaml': [ '4.1.1' ],
+130 silly audit   'json-buffer': [ '3.0.1' ],
+130 silly audit   'json-schema-traverse': [ '1.0.0' ],
+130 silly audit   'json-stringify-safe': [ '5.0.1' ],
+130 silly audit   jsonata: [ '2.0.6' ],
+130 silly audit   jsonfile: [ '6.2.0' ],
+130 silly audit   keyv: [ '4.5.4' ],
+130 silly audit   'lodash.clonedeep': [ '4.5.0' ],
+130 silly audit   'lowercase-keys': [ '3.0.0' ],
+130 silly audit   'lru-cache': [ '4.1.5', '10.4.3' ],
+130 silly audit   'math-intrinsics': [ '1.1.0' ],
+130 silly audit   'media-typer': [ '1.1.0', '0.3.0' ],
+130 silly audit   memorystore: [ '1.6.7' ],
+130 silly audit   'merge-descriptors': [ '1.0.3' ],
+130 silly audit   methods: [ '1.1.2' ],
+130 silly audit   mime: [ '3.0.0', '1.6.0' ],
+130 silly audit   'mime-db': [ '1.52.0' ],
+130 silly audit   'mime-types': [ '2.1.35' ],
+130 silly audit   minimist: [ '1.2.8' ],
+130 silly audit   minipass: [ '7.1.2' ],
+130 silly audit   minizlib: [ '3.1.0' ],
+130 silly audit   mkdirp: [ '0.5.6', '3.0.1' ],
+130 silly audit   moment: [ '2.30.1' ],
+130 silly audit   'moment-timezone': [ '0.5.48' ],
+130 silly audit   mqtt: [ '5.11.0' ],
+130 silly audit   ws: [ '8.18.3', '7.5.10', '8.17.1' ],
+130 silly audit   'mqtt-packet': [ '9.0.2' ],
+130 silly audit   multer: [ '2.0.2' ],
+130 silly audit   mustache: [ '4.2.0' ],
+130 silly audit   'mute-stream': [ '1.0.0' ],
+130 silly audit   negotiator: [ '0.6.3', '0.6.4' ],
+130 silly audit   'node-red': [ '4.1.2' ],
+130 silly audit   'node-red-admin': [ '4.1.2' ],
+130 silly audit   'node-watch': [ '0.7.4' ],
+130 silly audit   nopt: [ '5.0.0' ],
+130 silly audit   'normalize-url': [ '8.1.0' ],
+130 silly audit   'nth-check': [ '2.1.1' ],
+130 silly audit   'number-allocator': [ '1.0.14' ],
+130 silly audit   oauth2orize: [ '1.12.0' ],
+130 silly audit   'object-assign': [ '4.1.1' ],
+130 silly audit   'object-inspect': [ '1.13.4' ],
+130 silly audit   'on-finished': [ '2.4.1' ],
+130 silly audit   'on-headers': [ '1.1.0' ],
+130 silly audit   'p-cancelable': [ '3.0.0' ],
+130 silly audit   parse5: [ '6.0.1' ],
+130 silly audit   'parse5-htmlparser2-tree-adapter': [ '6.0.1' ],
+130 silly audit   parseurl: [ '1.3.3' ],
+130 silly audit   passport: [ '0.7.0' ],
+130 silly audit   'passport-http-bearer': [ '1.0.1' ],
+130 silly audit   'passport-oauth2-client-password': [ '0.1.2' ],
+130 silly audit   'passport-strategy': [ '1.0.0' ],
+130 silly audit   'path-to-regexp': [ '0.1.12' ],
+130 silly audit   pause: [ '0.0.1' ],
+130 silly audit   process: [ '0.11.10' ],
+130 silly audit   'process-nextick-args': [ '2.0.1' ],
+130 silly audit   'proxy-addr': [ '2.0.7' ],
+130 silly audit   'proxy-from-env': [ '1.1.0' ],
+130 silly audit   pseudomap: [ '1.0.2' ],
+130 silly audit   'quick-lru': [ '5.1.1' ],
+130 silly audit   'random-bytes': [ '1.0.0' ],
+130 silly audit   'range-parser': [ '1.2.1' ],
+130 silly audit   read: [ '3.0.1' ],
+130 silly audit   reinterval: [ '1.1.0' ],
+130 silly audit   'require-from-string': [ '2.0.2' ],
+130 silly audit   'resolve-alpn': [ '1.2.1' ],
+130 silly audit   responselike: [ '3.0.0' ],
+130 silly audit   rfdc: [ '1.4.1' ],
+130 silly audit   'safer-buffer': [ '2.1.2' ],
+130 silly audit   sax: [ '1.4.3' ],
+130 silly audit   semver: [ '7.7.1' ],
+130 silly audit   send: [ '0.19.1', '0.19.0' ],
+130 silly audit   'serve-static': [ '1.16.2' ],
+130 silly audit   setprototypeof: [ '1.2.0' ],
+130 silly audit   'side-channel': [ '1.1.0' ],
+130 silly audit   'side-channel-list': [ '1.0.0' ],
+130 silly audit   'side-channel-map': [ '1.0.1' ],
+130 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+130 silly audit   'smart-buffer': [ '4.2.0' ],
+130 silly audit   socks: [ '2.8.7' ],
+130 silly audit   split2: [ '4.2.0' ],
+130 silly audit   streamsearch: [ '1.1.0' ],
+130 silly audit   string_decoder: [ '1.3.0' ],
+130 silly audit   'strip-ansi': [ '6.0.1' ],
+130 silly audit   'supports-color': [ '7.2.0' ],
+130 silly audit   tar: [ '7.4.3' ],
+130 silly audit   yallist: [ '5.0.0', '2.1.2' ],
+130 silly audit   tldts: [ '6.1.86' ],
+130 silly audit   'tldts-core': [ '6.1.86' ],
+130 silly audit   toidentifier: [ '1.0.1' ],
+130 silly audit   'tough-cookie': [ '5.1.2' ],
+130 silly audit   tslib: [ '2.8.1' ],
+130 silly audit   'type-is': [ '1.6.18' ],
+130 silly audit   typedarray: [ '0.0.6' ],
+130 silly audit   'uglify-js': [ '3.19.3' ],
+130 silly audit   'uid-safe': [ '2.1.5' ],
+130 silly audit   uid2: [ '0.0.4' ],
+130 silly audit   'undici-types': [ '7.16.0' ],
+130 silly audit   universalify: [ '2.0.1' ],
+130 silly audit   unpipe: [ '1.0.0' ],
+130 silly audit   'util-deprecate': [ '1.0.2' ],
+130 silly audit   'utils-merge': [ '1.0.1' ],
+130 silly audit   uuid: [ '9.0.1' ],
+130 silly audit   vary: [ '1.1.2' ],
+130 silly audit   'worker-timers': [ '7.1.8' ],
+130 silly audit   'worker-timers-broker': [ '6.1.8' ],
+130 silly audit   'worker-timers-worker': [ '7.0.71' ],
+130 silly audit   xml2js: [ '0.6.2' ],
+130 silly audit   xmlbuilder: [ '11.0.1' ],
+130 silly audit   xtend: [ '4.0.2' ],
+130 silly audit   'node-red-dashboard': [ '3.6.6' ],
+130 silly audit   compression: [ '1.8.1' ],
+130 silly audit   gridstack: [ '0.6.4' ],
+130 silly audit   'socket.io': [ '4.8.1' ],
+130 silly audit   compressible: [ '2.0.18' ],
+130 silly audit   jquery: [ '3.7.1' ],
+130 silly audit   base64id: [ '2.0.0' ],
+130 silly audit   'engine.io': [ '6.6.4' ],
+130 silly audit   'socket.io-adapter': [ '2.5.5' ],
+130 silly audit   'socket.io-parser': [ '4.2.4' ],
+130 silly audit   '@types/cors': [ '2.8.19' ],
+130 silly audit   'engine.io-parser': [ '5.2.3' ],
+130 silly audit   '@socket.io/component-emitter': [ '3.1.2' ]
+130 silly audit }
+131 warn deprecated node-red-dashboard@3.6.6: No longer maintained - please look at alternatives such as @flowfuse/node-red-dashboard or node-red-contrib-uibuilder
+132 info run node-red-dashboard@3.6.6 postinstall node_modules/node-red-dashboard node fixgrid.js
+133 info run node-red-dashboard@3.6.6 postinstall { code: 0, signal: null }
+134 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 440ms
+135 silly audit report {}
+136 silly ADD node_modules/@socket.io/component-emitter
+137 silly ADD node_modules/engine.io-parser
+138 silly ADD node_modules/@types/cors
+139 silly ADD node_modules/socket.io-parser
+140 silly ADD node_modules/socket.io-parser/node_modules/ms
+141 silly ADD node_modules/socket.io-parser/node_modules/debug
+142 silly ADD node_modules/socket.io-adapter
+143 silly ADD node_modules/socket.io-adapter/node_modules/ms
+144 silly ADD node_modules/socket.io-adapter/node_modules/ws
+145 silly ADD node_modules/socket.io-adapter/node_modules/debug
+146 silly ADD node_modules/engine.io
+147 silly ADD node_modules/engine.io/node_modules/ms
+148 silly ADD node_modules/engine.io/node_modules/ws
+149 silly ADD node_modules/engine.io/node_modules/debug
+150 silly ADD node_modules/base64id
+151 silly ADD node_modules/jquery
+152 silly ADD node_modules/compressible
+153 silly ADD node_modules/socket.io
+154 silly ADD node_modules/socket.io/node_modules/ms
+155 silly ADD node_modules/socket.io/node_modules/debug
+156 silly ADD node_modules/gridstack
+157 silly ADD node_modules/compression
+158 silly ADD node_modules/compression/node_modules/safe-buffer
+159 silly ADD node_modules/compression/node_modules/negotiator
+160 silly ADD node_modules/node-red-dashboard
+161 verbose cwd /usr/src/node-red
+162 verbose os Linux 6.14.0-37-generic
+163 verbose node v20.19.6
+164 verbose npm  v10.8.2
+165 verbose exit 0
+166 info ok

@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # MQTT Broker - Mosquitto
+  # ============================================
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mqtt_broker
+    ports:
+      - "1883:1883"   # MQTT standard
+      - "9001:9001"   # WebSocket (optionnel)
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - mqtt_network
+    restart: unless-stopped
+
+  # ============================================
+  # Node-RED - Contrôleur d'Intersection
+  # ============================================
+  nodered:
+    image: nodered/node-red:latest
+    container_name: nodered_controller
+    ports:
+      - "1880:1880"   # Interface Web
+    volumes:
+      - ./nodered:/data
+    environment:
+      - TZ=Europe/Paris
+    networks:
+      - mqtt_network
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+# ============================================
+# Réseau partagé
+# ============================================
+networks:
+  mqtt_network:
+    driver: bridge
+
+# ============================================
+# Volumes persistants
+# ============================================
+volumes:
+  mosquitto_data:
+  mosquitto_log:
