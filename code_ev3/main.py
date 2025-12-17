@@ -346,10 +346,8 @@ def main():
             spd = 0
         elif dist <= OBSTACLE_STOP_DISTANCE:
             spd = 0
-        elif dist < OBSTACLE_SLOW_DISTANCE:
-            spd = int(BASE_SPEED * OBSTACLE_SLOW_FACTOR)
         else:
-            spd = BASE_SPEED
+            spd = int(BASE_SPEED)
         
         # Moteurs
         robot.drive(spd, turn)
