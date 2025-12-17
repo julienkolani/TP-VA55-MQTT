@@ -32,7 +32,7 @@ AXLE_TRACK = 104       # Distance entre roues en mm
 
 WHITE_REFLECTION = 60   # Reflexion sur blanc (0-100)
 BLACK_REFLECTION = 10   # Reflexion sur noir (0-100)
-MIDDLE_REFLECTION = 40  # Consigne PID = (blanc+noir)/2
+MIDDLE_REFLECTION = 35  # Consigne PID = (blanc+noir)/2
 COLOR_DEBOUNCE_MS = 300 # Temps min entre 2 detections couleur
 
 # =============================================================================
@@ -41,15 +41,15 @@ COLOR_DEBOUNCE_MS = 300 # Temps min entre 2 detections couleur
 
 KP = 1.2              # Proportionnel: reaction a l'erreur actuelle
 KI = 0.1              # Integral: corrige erreurs persistantes
-KD = 0.001            # Derive: amortit les oscillations
-COMMAND_FACTOR = 0.5  # Facteur sur commande finale (0.5=plus doux, 2.0=agressif)
+KD = 0.0001            # Derive: amortit les oscillations
+COMMAND_FACTOR = 0.75  # Facteur sur commande finale (0.5=plus doux, 2.0=agressif)
 MAX_SUM_ERROR = 1000  # Limite anti-windup pour l'integral
 
 # =============================================================================
 # VITESSE
 # =============================================================================
 
-BASE_SPEED = 150      # Vitesse de croisiere en mm/s
+BASE_SPEED = 80      # Vitesse de croisiere en mm/s
 LOOP_INTERVAL = 80    # Periode boucle principale en ms
 
 # =============================================================================
