@@ -1,0 +1,12 @@
+Algo 1 : one by one donc le feu alterne entre les voies donc tanto A passe tanto B
+Algo 2 : pour l'algo 2 : 
+
+le robot demarre tous sur une voie et donc au premier rouge il entre en zone de stockage il envoie donc une requette au topic pour pouvoir passer au prochain rouge qui est la zone de conflit
+
+si entre temps il a recu le ok; bien il passe else il attend au prochain rouge 
+
+
+algo 3 : 
+
+pareil mais les robots gardent une distance de securité et envoie une requette au topic pour dire qu'il est la derriere un robot sur la voix X; alors en fait le controler dans sa bd connais la longueur d'un robot; et la distance min d'arret ; et les robot qui se sont arreter par distance min ca lui permet de cree une liste d'attente comme un peleton virtuelle avec pour chaque robot taille du'un robot + distance min + ditance total des robots precedent ainsi on a une taille du peleton
+ce qui permet de choisir qui passe en foction de ce pelleton virtuelle 
