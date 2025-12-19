@@ -1,159 +1,270 @@
-# Protocole MQTT - Intersection Coopérative
+# 📡 Protocole MQTT - Intersection Coopérative
 ## VA55 - UTBM
 
-Ce document définit le protocole de communication MQTT pour le système d'intersection coopérative multi-mode.
+Ce document définit le protocole de communication MQTT unifié pour le système d'intersection coopérative.
 
 ---
 
-## 📡 Topics
+## 🔗 Topics
 
-| Topic | Direction | Description |
-|-------|-----------|-------------|
-| `intersection/status` | Robot → Contrôleur | Statut du robot (événementiel) |
-| `intersection/command` | Contrôleur → Robot | Commandes au robot |
+| Topic | Direction | QoS | Description |
+|-------|-----------|-----|-------------|
+| `intersection/status` | Robot → Contrôleur | 1 | État et événements du robot |
+| `intersection/command` | Contrôleur → Robot | 1 | Commandes pour le robot |
 
 ---
 
 ## 📨 Format des Messages
 
-### Message Status (Robot → Contrôleur)
+### 1. Message Status (Robot → Contrôleur)
+
+Envoyé par le robot à chaque événement clé.
 
 ```json
 {
-  "id": "EV3_01",
+  "id": "R1",
   "voie": "A",
   "etape": 2,
-  "action": "stop"
+  "cause": "marker_stop",
+  "dist_us": 9999
 }
 ```
 
-| Champ | Type | Description |
-|-------|------|-------------|
-| `id` | string | Identifiant unique du robot |
-| `voie` | string | Piste (A ou B) |
-| `etape` | int | 0=Loin, 1=Entrée zone, 2=Ligne arrêt, 3=Sortie |
-| `action` | string | "run" ou "stop" |
+#### Champs
 
-### Message Command (Contrôleur → Robot)
+| Champ | Type | Obligatoire | Description |
+|-------|------|-------------|-------------|
+| `id` | string | ✅ | Identifiant unique du robot (ex: "R1", "EV3_01") |
+| `voie` | string | ✅ | Voie du robot: `"A"` ou `"B"` |
+| `etape` | int | ✅ | Étape actuelle: 1, 2, ou 3 |
+| `cause` | string | ✅ | Raison de l'événement (voir tableau ci-dessous) |
+| `dist_us` | int | ❌ | Distance ultrason en mm (défaut: 9999) |
+
+#### Valeurs de `etape`
+
+| Étape | Position | Description |
+|-------|----------|-------------|
+| **1** | Ligne 1 | Entrée dans la zone de stockage |
+| **2** | Ligne 2 | Arrivée à la ligne d'arrêt (avant conflit) |
+| **3** | Ligne 3 | Sortie de la zone de conflit |
+
+#### Valeurs de `cause`
+
+| Cause | Étape | Description |
+|-------|-------|-------------|
+| `marker_entry` | 1 | Robot a détecté la ligne d'entrée |
+| `obstacle` | 1 | Robot bloqué par un obstacle (mode PELOTON) |
+| `marker_stop` | 2 | Robot s'arrête à la ligne (attend GO) |
+| `pass_through` | 2 | Robot passe sans s'arrêter (GO déjà reçu) |
+| `marker_exit` | 3 | Robot a quitté la zone de conflit |
+
+---
+
+### 2. Message Command (Contrôleur → Robot)
+
+Envoyé par Node-RED pour contrôler un robot.
 
 ```json
 {
-  "target_id": "EV3_01",
+  "target_id": "R1",
   "action": "GO"
 }
 ```
 
+#### Champs
+
 | Champ | Type | Description |
 |-------|------|-------------|
-| `target_id` | string | Robot cible (ou "ALL") |
-| `action` | string | GO, STOP, ADVANCE |
+| `target_id` | string | ID du robot cible, ou `"ALL"` pour tous |
+| `action` | string | Action à effectuer |
+
+#### Actions Disponibles
+
+| Action | Description |
+|--------|-------------|
+| `GO` | Autorisation de traverser la zone de conflit |
+| `STOP` | Ordre d'arrêt immédiat |
+| `RESET` | Réinitialisation du robot (annule le permis) |
 
 ---
 
-## ⚡ Envoi Événementiel (4 Moments Clés)
+## ⚡ Séquence Événementielle
 
-Le robot n'envoie **PAS** de données en continu. Il envoie uniquement lors de ces 4 événements:
+Le robot envoie des messages **uniquement** lors d'événements spécifiques, pas en continu.
 
-| # | Moment | Étape | Action | Signification |
-|---|--------|-------|--------|---------------|
-| 1 | 1er RED détecté | 1 | run | "J'arrive dans la zone" |
-| 2 | 2ème RED détecté | 2 | stop | "Je suis à la ligne, j'attends" |
-| 3 | Après réception GO | 2 | run | "Je traverse" |
-| 4 | 3ème RED détecté | 3 | run | "J'ai quitté l'intersection" |
-
----
-
-## 🎛️ Les 3 Modes du Contrôleur
-
-Le mode est configuré dans Node-RED, **pas** dans le robot.
-
-### Mode 1: FEU (Feu Tricolore)
+### Diagramme de Séquence
 
 ```
-Robot envoie etape=2 action=stop
-  → Contrôleur vérifie feu[voie]
-  → Si VERT: envoie GO
-  → Si ROUGE: attend
-```
-
-**Changement de feu:** Manuel via dashboard (bouton Toggle)
-
-### Mode 2: FIFO (Premier Arrivé Premier Servi)
-
-```
-Robot envoie etape=2 action=stop
-  → Si intersection LIBRE: GO + verrouille
-  → Si intersection OCCUPÉ: STOP + ajoute à queue
-
-Robot envoie etape=3
-  → Libère intersection
-  → Envoie GO au premier de la queue
-```
-
-### Mode 3: PELOTON (Gestion des Slots)
-
-```
-Robot envoie etape=1 (entrée zone)
-  → Si slot2 occupé: STOP (reste en slot1)
-  → Si slot2 libre: continue
-
-Robot envoie etape=2 (ligne arrêt)
-  → Occupe slot2
-  → Si intersection LIBRE: GO
-  → Sinon: STOP
-
-Robot envoie etape=3 (sortie)
-  → Libère slot2
-  → Envoie ADVANCE au robot en slot1
-  → Envoie GO au prochain
+Robot                    Broker                   Node-RED
+  │                        │                         │
+  │  ─── Détection Ligne 1 ───                       │
+  ├──────────────────────► │ ────────────────────────►
+  │  {etape:1, cause:      │  Traitement             │
+  │   marker_entry}        │                         │
+  │                        │ ◄────────────────────────┤
+  │ ◄──────────────────────┤  {action: GO}           │ (si FIFO libre)
+  │                        │                         │
+  │  ─── Détection Ligne 2 ───                       │
+  ├──────────────────────► │ ────────────────────────►
+  │  {etape:2, cause:      │  Traitement             │
+  │   marker_stop}         │                         │
+  │                        │ ◄────────────────────────┤
+  │ ◄──────────────────────┤  {action: GO}           │ (si autorisé)
+  │                        │                         │
+  │  ─── Traverse zone ─── │                         │
+  │                        │                         │
+  │  ─── Détection Ligne 3 ───                       │
+  ├──────────────────────► │ ────────────────────────►
+  │  {etape:3, cause:      │  Libère intersection    │
+  │   marker_exit}         │  → GO au suivant        │
+  │                        │                         │
 ```
 
 ---
 
-## 🔌 Architecture Réseau
+## 🎛️ Comportement par Mode
+
+### Mode FEU (Feu Tricolore)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Docker Host (PC)                        │
-│  ┌─────────────────┐    ┌─────────────────────────────────┐│
-│  │   Mosquitto     │◄───│       Node-RED                  ││
-│  │   Port 1883     │    │       Port 1880                 ││
-│  └────────▲────────┘    └─────────────────────────────────┘│
-│           │                                                 │
-└───────────┼─────────────────────────────────────────────────┘
-            │
-   ┌────────┴────────┐
-   │  Réseau WiFi    │
-   └────────┬────────┘
-            │
-    ┌───────┴───────┐
-    │   EV3 Robot   │
-    │  (Client MQTT)│
-    └───────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    LOGIQUE FEU                           │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  [Timer 1s] → Incrémente compteur                        │
+│            → Si durée atteinte: change phase             │
+│            → Si nouvelle phase VERT: GO aux robots       │
+│               en attente sur cette voie                  │
+│                                                          │
+│  [etape=2] → Vérifie feu de la voie                     │
+│           → Si VERT: GO immédiat                        │
+│           → Si ROUGE: ajoute à file_attente (pas de GO) │
+│                                                          │
+│  [etape=3] → Ignoré (la sécurité est gérée par le      │
+│              Rouge Intégral entre phases)                │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Phases:**
+| Phase | Durée | Feu A | Feu B |
+|-------|-------|-------|-------|
+| 0 | 10s | 🟢 VERT | 🔴 ROUGE |
+| 1 | 3s | 🔴 ROUGE | 🔴 ROUGE |
+| 2 | 10s | 🔴 ROUGE | 🟢 VERT |
+| 3 | 3s | 🔴 ROUGE | 🔴 ROUGE |
+
+---
+
+### Mode FIFO (Premier Arrivé, Premier Servi)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    LOGIQUE FIFO                          │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  [etape=1] → Ajoute robot à la queue                    │
+│           → Si LIBRE et premier: GO (pré-réservation)   │
+│           → intersection = OCCUPE                        │
+│                                                          │
+│  [etape=2] → Vérifie queue et intersection              │
+│           → Si LIBRE et premier: GO                     │
+│           → Sinon: pas de réponse (robot attend)        │
+│                                                          │
+│  [etape=3] → Retire robot de la queue                   │
+│           → intersection = LIBRE                         │
+│           → Si queue non vide: GO au premier            │
+│           → intersection = OCCUPE                        │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Pré-réservation:** Le robot peut recevoir GO dès l'étape 1, lui permettant un PASS-THROUGH à l'étape 2.
+
+---
+
+### Mode PELOTON (Inférence de Distance)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   LOGIQUE PELOTON                        │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  PHASE 1: INFÉRENCE DE DISTANCE                         │
+│  ────────────────────────────────────────────────────── │
+│  [etape=1, cause=obstacle]                              │
+│     → distance = queue_voie + 35cm                      │
+│                                                          │
+│  [etape=1, cause=marker_entry]                          │
+│     → distance = 100 (robot seul, loin)                 │
+│                                                          │
+│  [etape=2]                                              │
+│     → distance = 0 (à la ligne d'arrêt)                 │
+│     → reset queue_voie                                   │
+│                                                          │
+│  PHASE 2: TRI                                           │
+│  ────────────────────────────────────────────────────── │
+│  Trier tous les robots par distance croissante          │
+│  Leader = robot avec distance la plus petite            │
+│                                                          │
+│  PHASE 3: DÉCISION                                      │
+│  ────────────────────────────────────────────────────── │
+│  Si LIBRE et leader.distance == 0:                      │
+│     → GO au leader                                       │
+│     → intersection = OCCUPE                              │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧪 Test avec Mosquitto CLI
+## 🧪 Tests Manuels
+
+### Écouter tous les messages
 
 ```bash
-# Terminal 1: Écouter tous les messages
 mosquitto_sub -h localhost -p 1883 -t '#' -v
+```
 
-# Terminal 2: Simuler robot arrive en zone
-mosquitto_pub -h localhost -p 1883 -t 'intersection/status' \
-  -m '{"id":"EV3_01","voie":"A","etape":1,"action":"run"}'
+### Simuler un cycle complet
 
-# Simuler robot à la ligne d'arrêt
+```bash
+# Étape 1: Entrée
 mosquitto_pub -h localhost -p 1883 -t 'intersection/status' \
-  -m '{"id":"EV3_01","voie":"A","etape":2,"action":"stop"}'
+  -m '{"id":"R1","voie":"A","etape":1,"cause":"marker_entry","dist_us":9999}'
 
-# Simuler robot sort
+# Attendre le GO...
+
+# Étape 2: Ligne d'arrêt
 mosquitto_pub -h localhost -p 1883 -t 'intersection/status' \
-  -m '{"id":"EV3_01","voie":"A","etape":3,"action":"run"}'
+  -m '{"id":"R1","voie":"A","etape":2,"cause":"marker_stop","dist_us":9999}'
+
+# Attendre le GO...
+
+# Étape 3: Sortie
+mosquitto_pub -h localhost -p 1883 -t 'intersection/status' \
+  -m '{"id":"R1","voie":"A","etape":3,"cause":"marker_exit","dist_us":9999}'
+```
+
+### Envoyer une commande manuellement
+
+```bash
+mosquitto_pub -h localhost -p 1883 -t 'intersection/command' \
+  -m '{"target_id":"R1","action":"GO"}'
 ```
 
 ---
 
-*Version: 2.0 - Multi-Mode*
-*Dernière mise à jour: 2025-12-16*
+## 🔌 Configuration Réseau
+
+| Service | Hôte | Port | Protocole |
+|---------|------|------|-----------|
+| Broker MQTT | localhost | 1883 | TCP |
+| WebSocket MQTT | localhost | 9001 | WS |
+| Node-RED | localhost | 1880 | HTTP |
+| Dashboard | localhost | 1880/ui | HTTP |
+
+---
+
+*Version: 3.0 - Protocole Unifié*  
+*Dernière mise à jour: 2025-12-19*
