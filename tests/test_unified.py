@@ -1,147 +1,115 @@
 #!/usr/bin/env python3
 """
-Test Unifie - Simulation Async de Robots EV3
+Test Simple - Mode Texte Uniquement
 VA55 - UTBM
 
-Usage:
-    python test_unified.py --mode FIFO
-    python test_unified.py --mode FEU --robots 4 --wait 2
+Un robot à la fois, séquence claire, pour vérifier les algorithmes.
 """
 
 import asyncio
-import argparse
 import json
 import time
-import random
+import argparse
 from datetime import datetime
-from dataclasses import dataclass
-from typing import Optional
 
 import paho.mqtt.client as mqtt
-
-# =============================================================================
-# CONFIGURATION
-# =============================================================================
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 1883
 TOPIC_STATUS = "intersection/status"
 TOPIC_COMMAND = "intersection/command"
 
-# Couleurs ANSI
+# Couleurs
 class C:
     RST = "\033[0m"
     BOLD = "\033[1m"
     RED = "\033[91m"
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
-    BLUE = "\033[94m"
-    MAG = "\033[95m"
     CYAN = "\033[96m"
     GRAY = "\033[90m"
+    MAG = "\033[95m"
 
-# =============================================================================
-# ROBOT SIMULE
-# =============================================================================
 
-@dataclass
-class SimRobot:
-    robot_id: str
-    voie: str
-    client: mqtt.Client
-    speed: float = 1.0
-    wait_time: float = 0.0  # Temps d'attente supplementaire
+class SimpleRobot:
+    """Robot simple avec comportement EV3 exact"""
     
-    waiting: bool = False
-    got_go: bool = False
-    finished: bool = False
-    success: bool = False
+    def __init__(self, name: str, voie: str, client: mqtt.Client):
+        self.name = name
+        self.voie = voie
+        self.client = client
+        self.permis_recu = False
+        self.waiting = False
+        self.finished = False
+        self.success = False
     
-    def _color(self):
-        return C.CYAN if self.voie == "A" else C.YELLOW
-    
-    def log(self, emoji, msg, bold=False):
+    def log(self, msg: str):
         ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        style = C.BOLD if bold else ""
-        print(C.GRAY + "[" + ts + "]" + C.RST + " " + 
-              self._color() + style + self.robot_id + C.RST + " " + 
-              emoji + " " + msg)
+        color = C.CYAN if self.voie == "A" else C.YELLOW
+        print(f"{C.GRAY}[{ts}]{C.RST} {color}{C.BOLD}{self.name}{C.RST} {msg}")
     
-    def publish(self, etape, action):
-        msg = {"id": self.robot_id, "voie": self.voie, "etape": etape, "action": action}
+    def publish(self, etape: int, cause: str):
+        msg = {"id": self.name, "voie": self.voie, "etape": etape, "cause": cause, "dist_us": 9999}
         self.client.publish(TOPIC_STATUS, json.dumps(msg), qos=1)
-        self.log("📤", "etape=" + str(etape) + " action=" + action)
+        self.log(f"📤 Envoi: etape={etape} cause={cause}")
     
-    def on_cmd(self, action):
-        if action == "GO":
-            self.log("🟢", "GO", bold=True)
-            self.waiting = False
-            self.got_go = True
-        elif action == "STOP":
-            self.log("🛑", "STOP")
+    def on_go(self):
+        self.log(f"🟢 GO REÇU!")
+        self.permis_recu = True
+        self.waiting = False
     
-    async def delay(self, base):
-        d = (base / self.speed) * random.uniform(0.9, 1.1)
-        await asyncio.sleep(d)
-    
-    async def run(self, base_delay=0.5, timeout=15.0):
-        self.log("🚗", "Demarrage")
+    async def run(self, delay_before: float = 0.0, timeout: float = 30.0):
+        if delay_before > 0:
+            self.log(f"⏳ Attente {delay_before}s avant départ")
+            await asyncio.sleep(delay_before)
         
-        # Attente initiale configurable
-        if self.wait_time > 0:
-            self.log("⏳", "Attente " + str(self.wait_time) + "s avant depart")
-            await asyncio.sleep(self.wait_time)
-        
-        # RED #1 - Zone stockage
-        await self.delay(base_delay)
-        self.log("🔴", "RED #1 -> Zone stockage")
-        self.publish(1, "run")
-        await self.delay(base_delay * 0.5)
-        
-        # RED #2 - Ligne arret
-        await self.delay(base_delay)
-        self.log("🔴", "RED #2 -> Ligne arret")
-        self.waiting = True
-        self.got_go = False
-        self.publish(2, "stop")
-        self.log("⏳", "Attente autorisation...")
-        
-        # Attente GO
+        self.log("🚗 DÉPART")
         start = time.time()
-        while self.waiting:
-            if (time.time() - start) > timeout:
-                self.log("⚠️", "TIMEOUT!", bold=True)
-                self.finished = True
-                return False
-            await asyncio.sleep(0.05)
         
-        # Traversee
-        self.log("🚗", "Traverse intersection")
-        self.publish(2, "run")
-        await self.delay(base_delay)
+        # Avancer vers LIGNE 1
+        await asyncio.sleep(1.0)
+        self.log("🔴 LIGNE 1 → Entrée zone")
+        self.publish(1, "marker_entry")
+        await asyncio.sleep(0.5)
         
-        # RED #3 - Sortie
-        self.log("🔴", "RED #3 -> Sortie")
-        self.publish(3, "run")
-        self.log("✅", "Termine!", bold=True)
+        # Avancer vers LIGNE 2
+        await asyncio.sleep(1.5)
+        self.log("🔴 LIGNE 2 → Arrêt")
         
+        if self.permis_recu:
+            self.log("⚡ PASS-THROUGH (pré-autorisé)")
+            self.publish(2, "pass_through")
+        else:
+            self.publish(2, "marker_stop")
+            self.waiting = True
+            self.log("🛑 ARRÊT - Attente GO...")
+            
+            while self.waiting:
+                if time.time() - start > timeout:
+                    self.log("❌ TIMEOUT!")
+                    self.finished = True
+                    return False
+                await asyncio.sleep(0.1)
+            
+            self.log("🚗 GO reçu → Traverse")
+        
+        # Traverser + sortir
+        await asyncio.sleep(1.0)
+        self.log("🔴 LIGNE 3 → Sortie")
+        self.publish(3, "marker_exit")
+        
+        self.log("✅ TERMINÉ")
         self.finished = True
         self.success = True
         return True
 
 
-# =============================================================================
-# TEST RUNNER
-# =============================================================================
-
 class TestRunner:
-    def __init__(self, mode, num_robots=8, wait_per_robot=0.0):
+    def __init__(self, mode: str, num_robots: int = 4):
         self.mode = mode
         self.num_robots = num_robots
-        self.wait_per_robot = wait_per_robot
-        
         self.client = mqtt.Client(
-            client_id="test_" + str(int(time.time())),
+            client_id=f"test_{int(time.time())}",
             callback_api_version=mqtt.CallbackAPIVersion.VERSION2
         )
         self.robots = {}
@@ -152,7 +120,7 @@ class TestRunner:
     
     def _on_connect(self, client, userdata, flags, rc, props=None):
         if rc == 0:
-            print(C.GREEN + "[MQTT] Connecte" + C.RST)
+            print(f"{C.GREEN}[MQTT] Connecté{C.RST}")
             client.subscribe(TOPIC_COMMAND, qos=1)
             self.connected = True
     
@@ -161,123 +129,106 @@ class TestRunner:
             p = json.loads(msg.payload.decode())
             tid = p.get("target_id")
             act = p.get("action")
-            if tid in self.robots:
-                self.robots[tid].on_cmd(act)
-            elif tid == "ALL":
-                for r in self.robots.values():
-                    r.on_cmd(act)
-        except:
-            pass
-    
-    def _header(self, text):
-        print("\n" + C.MAG + "=" * 60)
-        print("  " + text)
-        print("=" * 60 + C.RST + "\n")
-    
-    async def run(self, base_delay=0.5, stagger=0.5, timeout=15.0):
-        self._header("TEST MODE: " + self.mode)
-        print("  Broker: " + BROKER_HOST + ":" + str(BROKER_PORT))
-        print("  Robots: " + str(self.num_robots))
-        print("  Wait/robot: " + str(self.wait_per_robot) + "s")
-        print()
-        
-        # Connexion
-        try:
-            self.client.connect(BROKER_HOST, BROKER_PORT, 60)
-            self.client.loop_start()
+            
+            print(f"{C.MAG}[BROKER→] {tid}: {act}{C.RST}")
+            
+            if tid in self.robots and act == "GO":
+                self.robots[tid].on_go()
         except Exception as e:
-            print(C.RED + "Erreur connexion: " + str(e) + C.RST)
-            return False
+            print(f"[ERR] {e}")
+    
+    async def run_sequential(self):
+        """Exécute les robots UN PAR UN pour voir clairement"""
+        for name, robot in self.robots.items():
+            print(f"\n{C.CYAN}{'─'*50}")
+            print(f"  Robot {name} - Voie {robot.voie}")
+            print(f"{'─'*50}{C.RST}\n")
+            
+            await robot.run(timeout=15.0)
+            await asyncio.sleep(0.5)
+    
+    async def run_parallel(self, stagger: float = 2.0):
+        """Exécute les robots en parallèle avec décalage"""
+        tasks = []
+        for i, (name, robot) in enumerate(self.robots.items()):
+            tasks.append(robot.run(delay_before=i * stagger, timeout=30.0))
         
-        for _ in range(50):
+        await asyncio.gather(*tasks, return_exceptions=True)
+    
+    def run(self, parallel: bool = True, stagger: float = 2.0):
+        print(f"\n{C.MAG}{'═'*60}")
+        print(f"  TEST MODE: {self.mode}")
+        print(f"  Robots: {self.num_robots}")
+        print(f"  Mode: {'Parallèle' if parallel else 'Séquentiel'}")
+        print(f"{'═'*60}{C.RST}\n")
+        
+        self.client.connect(BROKER_HOST, BROKER_PORT, 60)
+        self.client.loop_start()
+        
+        for _ in range(30):
             if self.connected:
                 break
-            await asyncio.sleep(0.1)
+            time.sleep(0.1)
         
         if not self.connected:
-            print(C.RED + "Timeout connexion MQTT" + C.RST)
+            print(f"{C.RED}Erreur MQTT{C.RST}")
             return False
         
-        # Creer robots
+        # Créer robots
         half = self.num_robots // 2
-        configs = []
+        for i in range(half + self.num_robots % 2):
+            name = f"R{i+1}_A"
+            self.robots[name] = SimpleRobot(name, "A", self.client)
         for i in range(half):
-            configs.append(("EV3_" + str(i+1).zfill(2), "A", random.uniform(0.7, 1.3)))
-        for i in range(half):
-            configs.append(("EV3_" + str(half+i+1).zfill(2), "B", random.uniform(0.7, 1.3)))
-        
-        for rid, voie, spd in configs:
-            self.robots[rid] = SimRobot(rid, voie, self.client, spd, self.wait_per_robot)
+            name = f"R{i+1}_B"
+            self.robots[name] = SimpleRobot(name, "B", self.client)
         
         print("Robots:")
-        for rid, voie, spd in configs:
-            bar = "🟢" if spd > 1.0 else "🟡" if spd > 0.85 else "🔴"
-            print("  " + bar + " " + rid + " (Voie " + voie + ") " + str(round(spd, 2)) + "x")
+        for name, r in self.robots.items():
+            color = C.CYAN if r.voie == "A" else C.YELLOW
+            print(f"  {color}● {name}{C.RST} (Voie {r.voie})")
         print()
         
-        self._header("SIMULATION")
+        print(f"{C.YELLOW}⚠️  Mode {self.mode} doit être sélectionné dans Node-RED!{C.RST}\n")
         
-        # Lancer robots
-        tasks = []
-        for i, (rid, _, _) in enumerate(configs):
-            robot = self.robots[rid]
-            
-            async def run_robot(r, delay):
-                await asyncio.sleep(delay)
-                await r.run(base_delay, timeout)
-            
-            tasks.append(run_robot(robot, i * stagger))
-        
-        await asyncio.gather(*tasks)
+        # Exécution
+        if parallel:
+            asyncio.run(self.run_parallel(stagger))
+        else:
+            asyncio.run(self.run_sequential())
         
         self.client.loop_stop()
         self.client.disconnect()
         
-        # Resultats
-        self._header("RESULTATS")
+        # Résultats
         ok = sum(1 for r in self.robots.values() if r.success)
-        ko = sum(1 for r in self.robots.values() if not r.success)
+        print(f"\n{C.MAG}{'═'*60}")
+        print(f"  RÉSULTATS: {ok}/{self.num_robots}")
+        print(f"{'═'*60}{C.RST}\n")
         
-        print("  ✅ Reussis:  " + str(ok) + "/" + str(self.num_robots))
-        print("  ⚠️ Timeouts: " + str(ko) + "/" + str(self.num_robots))
+        for name, r in self.robots.items():
+            status = f"{C.GREEN}✅{C.RST}" if r.success else f"{C.RED}❌{C.RST}"
+            color = C.CYAN if r.voie == "A" else C.YELLOW
+            print(f"  {status} {color}{name}{C.RST}")
+        
         print()
-        
-        if ko == 0:
-            print(C.GREEN + C.BOLD + "  ✅ TEST REUSSI" + C.RST)
-        else:
-            print(C.RED + C.BOLD + "  ❌ TEST ECHOUE" + C.RST)
-        print()
-        
-        return ko == 0
+        return ok == self.num_robots
 
-
-# =============================================================================
-# MAIN
-# =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="Test intersection VA55")
-    parser.add_argument("--mode", choices=["FEU", "FIFO"], default="FIFO")
-    parser.add_argument("--robots", type=int, default=8)
-    parser.add_argument("--timeout", type=float, default=15.0)
-    parser.add_argument("--delay", type=float, default=0.5, help="Delai base entre actions")
-    parser.add_argument("--stagger", type=float, default=0.5, help="Decalage entre robots")
-    parser.add_argument("--wait", type=float, default=0.0, help="Attente avant depart (pour voir dashboard)")
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=["FEU", "FIFO", "PELOTON"], default="FIFO")
+    parser.add_argument("--robots", type=int, default=4)
+    parser.add_argument("--sequential", action="store_true", help="Exécuter un robot à la fois")
+    parser.add_argument("--stagger", type=float, default=2.0, help="Décalage entre robots (parallèle)")
     args = parser.parse_args()
     
-    print("\n" + C.CYAN + "#" * 60)
-    print("#  TEST UNIFIE VA55")
-    print("#  Mode: " + args.mode)
-    print("#" * 60 + C.RST)
+    print(f"\n{C.CYAN}╔{'═'*58}╗")
+    print(f"║{'TEST VA55 - MODE TEXTE':^58}║")
+    print(f"╚{'═'*58}╝{C.RST}")
     
-    print("\n" + C.YELLOW + "IMPORTANT:" + C.RST)
-    print("  1. docker compose up -d")
-    print("  2. Selectionnez mode " + args.mode + " dans http://localhost:1880/ui")
-    print()
-    
-    runner = TestRunner(args.mode, args.robots, args.wait)
-    success = asyncio.run(runner.run(args.delay, args.stagger, args.timeout))
+    runner = TestRunner(args.mode, args.robots)
+    success = runner.run(parallel=not args.sequential, stagger=args.stagger)
     
     return 0 if success else 1
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env pybricks-micropython
 """
-Robot EV3 - Intersection Cooperative VA55
+Robot EV3 - Intersection Cooperative VA55 (Consensus 3 Marqueurs)
 UTBM - Master VASA
 
-Utilise l'auto-detection des ports pour moteurs et capteurs.
-Tous les parametres sont dans config.py.
+Logique : Robot "Ignorant" avec sequenceur 3 etapes.
 """
 
 from pybricks.hubs import EV3Brick
@@ -19,11 +18,10 @@ from config import (
     BROKER_IP, BROKER_PORT, TOPIC_STATUS, TOPIC_COMMAND,
     ROBOT_ID, VOIE,
     WHEEL_DIAMETER, AXLE_TRACK,
-    MIDDLE_REFLECTION, COLOR_DEBOUNCE_MS,
+    MIDDLE_REFLECTION,
     KP, KI, KD, COMMAND_FACTOR, MAX_SUM_ERROR,
     BASE_SPEED, LOOP_INTERVAL,
-    OBSTACLE_STOP_DISTANCE, OBSTACLE_SLOW_DISTANCE, OBSTACLE_SLOW_FACTOR,
-    DEBUG_INTERVAL
+    OBSTACLE_STOP_DISTANCE, DEBUG_INTERVAL
 )
 
 # MQTT (optionnel)
@@ -35,15 +33,13 @@ except ImportError:
     print("[WARN] umqtt non disponible")
 
 # =============================================================================
-# AUTO-DETECTION DES PORTS
+# AUTO-DETECTION DES PORTS (INCHANGE)
 # =============================================================================
 
 SENSOR_PORTS = [Port.S1, Port.S2, Port.S3, Port.S4]
 MOTOR_PORTS = [Port.A, Port.B, Port.C, Port.D]
 
-
 def auto_detect_color_sensor():
-    """Detecte automatiquement le capteur couleur."""
     for port in SENSOR_PORTS:
         try:
             sensor = ColorSensor(port)
@@ -54,9 +50,7 @@ def auto_detect_color_sensor():
             continue
     raise Exception("Pas de capteur couleur!")
 
-
 def auto_detect_ultrasonic():
-    """Detecte automatiquement le capteur ultrason."""
     for port in SENSOR_PORTS:
         try:
             sensor = UltrasonicSensor(port)
@@ -68,9 +62,7 @@ def auto_detect_ultrasonic():
     print("[AUTO] Pas de capteur ultrason")
     return None, None
 
-
 def auto_detect_motors():
-    """Detecte automatiquement les moteurs."""
     found = []
     for port in MOTOR_PORTS:
         try:
@@ -79,124 +71,47 @@ def auto_detect_motors():
             print("[AUTO] Moteur sur", port)
         except:
             continue
-    
     if len(found) < 2:
         raise Exception("Moins de 2 moteurs!")
-    
     return found[0][0], found[1][0], found[0][1], found[1][1]
 
-
 # =============================================================================
-# CLASSE LOGGER
+# CLASSE LOGGER (MISE A JOUR POUR LE NOUVEAU PROTOCOLE)
 # =============================================================================
 
 class RobotLogger:
-    """Logging avec timestamps et emojis ASCII."""
-    
     def __init__(self, robot_id):
         self.robot_id = robot_id
         self.sw = StopWatch()
         self.sw.reset()
     
-    def _zfill(self, val, width):
-        """Zero-fill compatible with MicroPython."""
-        s = str(val)
-        while len(s) < width:
-            s = "0" + s
-        return s
-    
     def _ts(self):
         ms = self.sw.time()
-        m = ms // 60000
-        s = (ms // 1000) % 60
-        r = ms % 1000
-        return str(m) + ":" + self._zfill(s, 2) + "." + self._zfill(r, 3)
+        return "{:02d}:{:02d}.{:03d}".format(ms // 60000, (ms // 1000) % 60, ms % 1000)
     
     def log(self, tag, msg):
-        print("[" + self._ts() + "] " + self.robot_id + " " + tag + " " + msg)
+        print("[" + self._ts() + "] " + tag + " " + msg)
     
-    def red(self, zone):
-        self.log("[RED]", "Detecte -> " + zone)
-    
-    def send(self, etape, action):
-        self.log("[>>>]", "etape=" + str(etape) + " action=" + action)
+    def event(self, etape, cause):
+        self.log("[MQTT >>]", "Etape: " + str(etape) + " | Cause: " + cause)
     
     def recv(self, action):
-        tag = "[GO!]" if action == "GO" else "[STP]" if action == "STOP" else "[<<<]"
+        tag = "[GO!]" if action == "GO" else "[CMD]"
         self.log(tag, "Recu: " + action)
-    
-    def wait_auth(self):
-        self.log("[...]", "Attente autorisation")
-    
-    def ok(self, msg=""):
-        self.log("[OK!]", msg if msg else "OK")
-    
-    def warn(self, msg):
-        self.log("[!!!]", msg)
-    
-    def pid(self, refl, err, cmd, spd):
-        self.log("[PID]", "r=" + str(refl) + " e=" + str(int(err)) + " c=" + str(int(cmd)) + " s=" + str(int(spd)))
-
 
 # =============================================================================
-# CLASSE PID
-# =============================================================================
-
-class PIDController:
-    """Controleur PID pour suivi de ligne."""
-    
-    def __init__(self, kp, ki, kd, target, dt_ms, cmd_factor=1.0, max_sum=1000):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.target = target
-        self.dt = dt_ms / 1000.0
-        self.cmd_factor = cmd_factor
-        self.max_sum = max_sum
-        self.sum_err = 0
-        self.last_err = 0
-    
-    def compute(self, val):
-        """Calcule la commande de rotation."""
-        err = val - self.target
-        
-        # Integral + anti-windup
-        self.sum_err += err
-        if self.sum_err > self.max_sum:
-            self.sum_err = self.max_sum
-        elif self.sum_err < -self.max_sum:
-            self.sum_err = -self.max_sum
-        
-        # Derivee
-        deriv = (err - self.last_err) / self.dt
-        
-        # PID
-        cmd = self.kp * err + self.ki * self.sum_err + self.kd * deriv
-        cmd = cmd * self.cmd_factor
-        
-        self.last_err = err
-        return cmd
-    
-    def get_error(self):
-        return self.last_err
-
-
-# =============================================================================
-# CLASSE MQTT
+# CLASSE MQTT (MISE A JOUR PAYLOAD UNIVERSEL)
 # =============================================================================
 
 class SimpleMQTT:
-    """Client MQTT simplifie."""
-    
     def __init__(self, robot_id, voie, broker, port, topic_st, topic_cmd, log):
         self.robot_id = robot_id
         self.voie = voie
         self.topic_st = topic_st
-        self.topic_cmd = topic_cmd
         self.log = log
         self.client = None
         self.connected = False
-        self.last_cmd = None
+        self.permis_recu = False # Stocke l'autorisation
         
         if MQTT_AVAILABLE:
             try:
@@ -208,55 +123,87 @@ class SimpleMQTT:
                 self.connected = True
                 log.log("[NET]", "Connecte " + broker)
             except Exception as e:
-                log.warn("MQTT: " + str(e))
+                log.log("[ERR]", "MQTT: " + str(e))
     
     def _on_msg(self, topic, msg):
         try:
             p = msg.decode()
+            # Parsing manuel rudimentaire pour eviter erreurs JSON
             if '"target_id"' in p and '"action"' in p:
-                # Parse target_id
+                # Extraction ID cible
                 i = p.find('"target_id"') + 13
                 j = p.find('"', i + 1)
                 tid = p[i:j]
-                # Parse action
+                
+                # Extraction Action
                 i = p.find('"action"') + 10
                 j = p.find('"', i + 1)
                 act = p[i:j]
+                
                 if tid == self.robot_id or tid == "ALL":
-                    self.last_cmd = act
                     self.log.recv(act)
+                    if act == "GO":
+                        self.permis_recu = True
+                    elif act == "RESET":
+                        self.permis_recu = False
         except:
             pass
     
-    def publish(self, etape, action):
-        if not self.connected:
-            return
-        msg = '{"id":"' + self.robot_id + '","voie":"' + self.voie + '","etape":' + str(etape) + ',"action":"' + action + '"}'
+    def publish(self, etape, cause, dist_us=999):
+        """Envoie le format universel JSON"""
+        if not self.connected: return
+        
+        # Construction manuelle du JSON pour performance
+        msg = '{"id":"' + self.robot_id + '",' + \
+              '"voie":"' + self.voie + '",' + \
+              '"etape":' + str(etape) + ',' + \
+              '"cause":"' + cause + '",' + \
+              '"dist_us":' + str(dist_us) + '}'
         try:
             self.client.publish(self.topic_st, msg)
-            self.log.send(etape, action)
+            self.log.event(etape, cause)
         except:
             pass
     
     def check(self):
         if self.connected:
-            try:
-                self.client.check_msg()
-            except:
-                pass
+            try: self.client.check_msg()
+            except: pass
     
-    def get_cmd(self):
-        c = self.last_cmd
-        self.last_cmd = None
-        return c
+    def reset_permis(self):
+        self.permis_recu = False
+
+    def has_permis(self):
+        return self.permis_recu
     
     def close(self):
         if self.connected:
-            try:
-                self.client.disconnect()
-            except:
-                pass
+            try: self.client.disconnect()
+            except: pass
 
+# =============================================================================
+# PID CONTROLLER (INCHANGE)
+# =============================================================================
+
+class PIDController:
+    def __init__(self, kp, ki, kd, target, dt_ms, cmd_factor=1.0, max_sum=1000):
+        self.kp, self.ki, self.kd = kp, ki, kd
+        self.target = target
+        self.dt = dt_ms / 1000.0
+        self.cmd_factor = cmd_factor
+        self.max_sum = max_sum
+        self.sum_err = 0
+        self.last_err = 0
+    
+    def compute(self, val):
+        err = val - self.target
+        self.sum_err += err
+        if self.sum_err > self.max_sum: self.sum_err = self.max_sum
+        elif self.sum_err < -self.max_sum: self.sum_err = -self.max_sum
+        deriv = (err - self.last_err) / self.dt
+        cmd = (self.kp * err + self.ki * self.sum_err + self.kd * deriv) * self.cmd_factor
+        self.last_err = err
+        return cmd
 
 # =============================================================================
 # PROGRAMME PRINCIPAL
@@ -265,111 +212,116 @@ class SimpleMQTT:
 def main():
     ev3 = EV3Brick()
     ev3.speaker.beep()
-    
     log = RobotLogger(ROBOT_ID)
-    log.log("[SYS]", "Demarrage " + ROBOT_ID + " voie " + VOIE)
+    log.log("[INIT]", "Robot Ignorant 3-Etapes demarre")
     
-    # Auto-detection
-    log.log("[SYS]", "Detection des ports...")
+    # 1. Hardware Setup
     color_sensor, _ = auto_detect_color_sensor()
     ultrasonic, _ = auto_detect_ultrasonic()
     left_motor, right_motor, _, _ = auto_detect_motors()
-    
-    # DriveBase
     robot = DriveBase(left_motor, right_motor, WHEEL_DIAMETER, AXLE_TRACK)
-    
-    # PID
     pid = PIDController(KP, KI, KD, MIDDLE_REFLECTION, LOOP_INTERVAL, COMMAND_FACTOR, MAX_SUM_ERROR)
-    
-    # MQTT
     mqtt = SimpleMQTT(ROBOT_ID, VOIE, BROKER_IP, BROKER_PORT, TOPIC_STATUS, TOPIC_COMMAND, log)
     
-    # Etat
-    sw = StopWatch()
-    sw.reset()
-    etape = 0
-    wait_go = False
-    got_go = False
+    # 2. Variables d'Etat (Sequencement)
+    compteur_lignes = 0
+    sur_ligne = False # Anti-rebond
     running = True
-    dbg_cnt = 0
-    last_color = None
-    last_color_time = 0
     
-    log.log("[SYS]", "Pret!")
+    log.log("[RDY]", "En attente de ligne...")
     
     while running:
-        t = sw.time()
+        start_time = time.time()
         
-        # Capteurs
-        refl = color_sensor.reflection()
-        dist = ultrasonic.distance() if ultrasonic else 9999
+        # --- LECTURE CAPTEURS ---
+        reflection = color_sensor.reflection()
         color = color_sensor.color()
+        # Si pas d'ultrason, on met une grande distance par defaut
+        dist_us = ultrasonic.distance() if ultrasonic else 9999
         
-        # Detection transition couleur (debounce)
-        if color != last_color and (t - last_color_time) > COLOR_DEBOUNCE_MS:
-            if color == Color.RED:
-                if etape == 0:
-                    etape = 1
-                    log.red("Zone stockage")
-                    mqtt.publish(1, "run")
-                elif etape == 1:
-                    etape = 2
-                    wait_go = True
-                    got_go = False
-                    log.red("Ligne arret")
-                    mqtt.publish(2, "stop")
-                    log.wait_auth()
-                elif etape == 2 and got_go:
-                    etape = 3
-                    log.red("Sortie")
-                    mqtt.publish(3, "run")
-                    log.ok("Intersection traversee!")
-                    etape = 0
-                    got_go = False
-            last_color = color
-            last_color_time = t
+        # --- LOGIQUE OBSTACLE (PELOTON) ---
+        # Si on est dans la file (apres ligne 1, avant ligne 2) et qu'on colle qqun
+        if compteur_lignes == 1 and dist_us < OBSTACLE_STOP_DISTANCE:
+            robot.stop()
+            log.log("[OBS]", "Obstacle detecte (" + str(dist_us) + "mm)")
+            mqtt.publish(1, "obstacle", dist_us)
+            
+            # Attente active que l'obstacle s'eloigne
+            while dist_us < (OBSTACLE_STOP_DISTANCE + 50): # Hysteresis +50mm
+                if ultrasonic: dist_us = ultrasonic.distance()
+                mqtt.check() # On continue d'ecouter MQTT au cas ou
+                wait(100)
+            
+            log.log("[OBS]", "Voie libre, redemarrage")
+            # On laisse le PID reprendre la main ensuite
+
+        # --- LOGIQUE LIGNES (SEQUENCEUR) ---
+        # Detection Rouge (Ton scotch orange)
+        if color == Color.RED:
+            if not sur_ligne:
+                sur_ligne = True
+                compteur_lignes += 1
+                log.log("[DET]", "Ligne detectee -> Compteur = " + str(compteur_lignes))
+                
+                # --- ETAPE 1 : ENTREE ZONE ---
+                if compteur_lignes == 1:
+                    ev3.speaker.beep(500, 100)
+                    mqtt.publish(1, "marker_entry", dist_us)
+                    # On continue de rouler
+                    
+                # --- ETAPE 2 : LIGNE D'ARRET ---
+                elif compteur_lignes == 2:
+                    mqtt.check() # Derniere verif avant decision
+                    
+                    if mqtt.has_permis():
+                        # CAS A : PASS-THROUGH (Permis deja la)
+                        log.log("[PASS]", "Permis OK -> Passage direct")
+                        ev3.speaker.beep(1000, 200)
+                        mqtt.publish(2, "pass_through", dist_us)
+                        # On ne s'arrete pas
+                    else:
+                        # CAS B : STOP & WAIT
+                        robot.stop()
+                        log.log("[STOP]", "Pas de permis -> Arret")
+                        mqtt.publish(2, "marker_stop", dist_us)
+                        
+                        # Boucle bloquante d'attente
+                        while not mqtt.has_permis():
+                            mqtt.check()
+                            wait(50)
+                        
+                        log.log("[GO]", "Permis recu -> Depart")
+                        ev3.speaker.beep(1000, 200)
+                        # Le robot redemarrera grace au PID a la prochaine iteration
+
+                # --- ETAPE 3 : SORTIE ---
+                elif compteur_lignes == 3:
+                    mqtt.publish(3, "marker_exit", dist_us)
+                    ev3.speaker.beep(500, 100)
+                    log.log("[RST]", "Reset Cycle")
+                    compteur_lignes = 0
+                    mqtt.reset_permis()
         
-        # MQTT
+        elif color != Color.RED:
+             # On a quitte la ligne rouge, on re-arme la detection
+             sur_ligne = False
+        
+        # --- SUIVI DE LIGNE (PID) ---
+        # Le PID ne tourne que si on n'est pas bloque dans les boucles while ci-dessus
+        turn = pid.compute(reflection)
+        robot.drive(BASE_SPEED, turn)
+        
+        # --- DEBUG & MAINTENANCE ---
         mqtt.check()
-        cmd = mqtt.get_cmd()
-        if cmd == "GO":
-            wait_go = False
-            got_go = True
-        elif cmd == "STOP":
-            wait_go = True
-        
-        # PID
-        turn = pid.compute(refl)
-        
-        # Vitesse
-        if wait_go:
-            spd = 0
-        elif dist <= OBSTACLE_STOP_DISTANCE:
-            spd = 0
-        else:
-            spd = int(BASE_SPEED)
-        
-        # Moteurs
-        robot.drive(spd, turn)
-        
-        # Debug
-        dbg_cnt += LOOP_INTERVAL
-        if dbg_cnt >= DEBUG_INTERVAL:
-            dbg_cnt = 0
-            log.pid(refl, pid.get_error(), turn, spd)
-        
-        # Arret
         if Button.CENTER in ev3.buttons.pressed():
             running = False
-            log.log("[SYS]", "Arret utilisateur")
         
         wait(LOOP_INTERVAL)
-    
+
+    # Fin du programme
     robot.stop()
     mqtt.close()
-    log.log("[SYS]", "Fin")
-    ev3.speaker.beep()
-
+    log.log("[END]", "Programme termine")
 
 if __name__ == "__main__":
     main()
